@@ -9,12 +9,15 @@ from langchain_community.chat_models import ChatOllama
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers.string import StrOutputParser
 from langchain_core.runnables.passthrough import RunnablePassthrough
+from flask_cors import CORS, cross_origin
 
 
 import json
 import os
 
+app = Flask(__name__)
 
+CORS(app)
 os.environ["AZURESEARCH_FIELDS_ID"] = "id"
 # os.environ["AZURESEARCH_FIELDS_CONTENT"] = "chunk"
 os.environ["AZURESEARCH_FIELDS_CONTENT_VECTOR"] = "content_vector"
@@ -29,13 +32,9 @@ vector_store = get_vector_store(embeddings)
 retriever = vector_store.as_retriever()
 # add_data_to_vector_db(embeddings, vector_store)
 
-app = Flask(__name__)
-
-
-
-
 # Fetch all data from vector db
 @app.route('/fetch_all_data',methods=['GET'])
+@cross_origin() 
 def get_data():
     database_name = 'Test1'
     container_name = 'DATA'
@@ -48,7 +47,8 @@ def get_data():
 # {
 #     "value":"SG02 \"++ST100+SD002\":Schutztuer entriegelt"
 # }
-@app.route('/fetch_data',methods=['GET'])
+@app.route('/fetch_data',methods=['POST'])
+@cross_origin() 
 def get_db_data():
     data = json.loads(request.data)
     value = data.get("value")
@@ -57,10 +57,11 @@ def get_db_data():
     valuetext = request.args.get('valuetext', default=value, type=str)
     query_text = f"SELECT * FROM Items WHERE Items.valuetext = '{valuetext}'"
     items = query_cosmos_db(database_name, container_name, query_text)
-    return jsonify(items)
+    return items
 
 # Fetch data from vector db
-@app.route('/free_text_search',methods=['GET'])
+@app.route('/free_text_search',methods=['POST'])
+@cross_origin() 
 def get_vector_data():
     data = json.loads(request.data)
     value = data.get("value")
@@ -97,4 +98,4 @@ def get_vector_data():
 
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True,port=5000)
